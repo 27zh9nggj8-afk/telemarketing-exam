@@ -423,6 +423,13 @@ input,textarea{font-family:inherit;outline:none;}
     <div id="auth-msg" style="color:var(--muted);font-size:13px;margin-top:12px;min-height:18px;line-height:1.6"></div>
     <button class="lic-btn" id="auth-go" style="margin-top:6px">로그인</button>
     <button id="auth-switch" style="margin-top:12px;background:none;border:none;color:var(--muted);font-size:13.5px;width:100%;padding:8px;cursor:pointer">계정이 없어요 → 회원가입</button>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:14px">
+      <div style="flex:1;height:1px;background:var(--line)"></div>
+      <span style="color:var(--muted);font-size:12px">또는</span>
+      <div style="flex:1;height:1px;background:var(--line)"></div>
+    </div>
+    <button id="auth-guest" style="margin-top:14px;width:100%;padding:13px;border-radius:12px;background:var(--surface);color:var(--ink);font-size:14.5px;font-weight:600;border:1px solid var(--line);cursor:pointer;font-family:var(--sans)">로그인 없이 사용하기</button>
+    <div style="color:var(--muted);font-size:12px;line-height:1.65;margin-top:10px;text-align:left;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px">로그인 없이 사용하면 학습 기록이 <b>지금 이 기기(브라우저)에만</b> 저장돼요. 다른 기기와 연동되지 않고, 브라우저 데이터를 지우면 기록도 사라질 수 있어요. 나중에 회원가입하면 이 기기의 기록을 계정으로 옮겨드려요.</div>
   </div>
 </div>
 
@@ -433,6 +440,8 @@ input,textarea{font-family:inherit;outline:none;}
   var ID_DOMAIN = 'tm-user.app';
   var ID_RE = /^[a-z0-9_]{3,20}$/;
   var KEY_PREFIX_BASE = 'hapkyeok_v2_';
+  var GUEST_KEY = 'tm_guest_mode';
+  var GUEST_NAME = '게스트'; // 한글이라 실제 계정 아이디(영문·숫자·_만 허용)와 절대 겹치지 않음
 
   var gate = document.getElementById('auth-gate');
   var idEl = document.getElementById('auth-id');
@@ -442,6 +451,7 @@ input,textarea{font-family:inherit;outline:none;}
   var msgEl = document.getElementById('auth-msg');
   var goBtn = document.getElementById('auth-go');
   var switchBtn = document.getElementById('auth-switch');
+  var guestBtn = document.getElementById('auth-guest');
   var titleEl = document.getElementById('auth-title');
 
   var isLogin = true;
@@ -512,6 +522,45 @@ input,textarea{font-family:inherit;outline:none;}
     document.body.appendChild(s);
   }
 
+  function addLoginButton(){
+    var b = document.createElement('button');
+    b.textContent = '로그인';
+    b.style.cssText = 'position:fixed;top:64px;right:14px;z-index:19;padding:6px 12px;border-radius:20px;background:var(--surface);color:var(--muted);font-size:11.5px;border:1px solid var(--line);box-shadow:var(--shadow);cursor:pointer;font-family:var(--sans);';
+    b.onclick = function(){
+      localStorage.removeItem(GUEST_KEY);
+      location.reload();
+    };
+    document.body.appendChild(b);
+  }
+
+  // 로그인 없이 쓰던 기기 기록을 새 계정 키로 복사 — 회원가입 직후 1회
+  function migrateGuestData(id){
+    var guestPrefix = KEY_PREFIX_BASE + encodeURIComponent(GUEST_NAME) + '_';
+    var target = KEY_PREFIX_BASE + encodeURIComponent(id) + '_';
+    var keys = [];
+    for (var i = 0; i < localStorage.length; i++){
+      var k = localStorage.key(i);
+      if (k && k.indexOf(guestPrefix) === 0) keys.push(k);
+    }
+    keys.forEach(function(k){
+      var nk = target + k.slice(guestPrefix.length);
+      if (localStorage.getItem(nk) === null){
+        try { localStorage.setItem(nk, localStorage.getItem(k)); } catch (e) {}
+      }
+    });
+  }
+
+  function startGuest(){
+    try { localStorage.setItem(GUEST_KEY, '1'); } catch (e) {}
+    var params = new URLSearchParams(location.search);
+    if (params.get('user') !== GUEST_NAME){
+      params.set('user', GUEST_NAME);
+      history.replaceState(null, '', location.pathname + '?' + params.toString());
+    }
+    bootApp();
+    addLoginButton();
+  }
+
   function addLogoutButton(){
     var b = document.createElement('button');
     b.textContent = '로그아웃';
@@ -523,6 +572,7 @@ input,textarea{font-family:inherit;outline:none;}
   }
 
   function pullAndBoot(user){
+    localStorage.removeItem(GUEST_KEY);
     var id = emailToId(user.email);
     var params = new URLSearchParams(location.search);
     if (params.get('user') !== id){
@@ -576,6 +626,7 @@ input,textarea{font-family:inherit;outline:none;}
         return sb.auth.signUp({ email: email, password: pw }).then(function(res){
           if (res.error){ setMsg(authErrorMsg(res.error, false), 'err'); goBtn.disabled = false; return; }
           if (res.data.session){
+            migrateGuestData(rawId.toLowerCase());
             return pullAndBoot(res.data.user);
           } else {
             setMsg('서버 설정 문제로 가입이 완료되지 않았어요', 'err');
@@ -589,9 +640,23 @@ input,textarea{font-family:inherit;outline:none;}
     });
   };
 
+  guestBtn.onclick = startGuest;
+
   idEl.addEventListener('keydown', function(e){ if (e.key === 'Enter'){ e.preventDefault(); pwEl.focus(); } });
   pwEl.addEventListener('keydown', function(e){ if (e.key === 'Enter'){ e.preventDefault(); if (!isLogin) pw2El.focus(); else goBtn.click(); } });
   pw2El.addEventListener('keydown', function(e){ if (e.key === 'Enter'){ e.preventDefault(); goBtn.click(); } });
+
+  // 로그인 없이 쓰기를 선택했던 기기는 게이트 없이 바로 진입 (네트워크 불필요)
+  // 이 스크립트는 #app-bundle보다 앞에 있어서, 파싱이 끝난 뒤에 부팅해야 함
+  if (localStorage.getItem(GUEST_KEY) === '1'){
+    gate.style.display = 'none';
+    if (document.readyState === 'loading'){
+      document.addEventListener('DOMContentLoaded', startGuest);
+    } else {
+      startGuest();
+    }
+    return;
+  }
 
   ensureClient().then(function(){
     return sb.auth.getSession();
