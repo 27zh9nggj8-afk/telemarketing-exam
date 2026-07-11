@@ -821,6 +821,40 @@ react/cjs/react-jsx-runtime.production.js:
 })();
 </script>
 <script>
+/* 결제 완료 후 첫 진입(?welcome=1) — 환영 + 홈 화면에 추가 안내 */
+(function () {
+  var q = new URLSearchParams(location.search);
+  if (!q.has('welcome') && !q.has('paymentId')) return;
+  history.replaceState(null, '', location.pathname);
+  var installed = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  var installBtn = installed ? ''
+    : '<div id="tm-welcome-install" style="margin-top:18px;text-align:center;background:#2958C2;color:#fff;border-radius:12px;padding:13px;font-weight:700;cursor:pointer;">홈 화면에 추가하기</div>'
+      + '<div style="margin-top:10px;font-size:12.5px;color:#5b6472;text-align:center;">홈 화면에 추가하면 다음부터 앱처럼 바로 열 수 있어요.</div>';
+  function show() {
+    var ov = document.createElement('div');
+    ov.id = 'tm-welcome';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:99992;background:rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;padding:24px;';
+    ov.innerHTML = '<div style="background:#fff;color:#14171c;border-radius:20px;padding:28px 22px 18px;max-width:380px;width:100%;font-family:inherit;font-size:14.5px;line-height:1.6;box-shadow:0 20px 50px rgba(0,0,0,.25);text-align:center;">'
+      + '<div style="font-size:40px;">🎉</div>'
+      + '<b style="font-size:18px;display:block;margin-top:8px;">결제가 완료됐어요!</b>'
+      + '<div style="margin-top:6px;color:#5b6472;">합격노트 3종을 평생 이용하실 수 있어요.<br>지금 바로 공부를 시작해보세요.</div>'
+      + installBtn
+      + '<div id="tm-welcome-close" style="margin-top:12px;text-align:center;color:#5b6472;padding:10px;font-size:14px;cursor:pointer;">' + (installed ? '시작하기' : '나중에 할게요') + '</div></div>';
+    ov.addEventListener('click', function (ev) {
+      if (ev.target === ov || ev.target.closest('#tm-welcome-close')) { ov.remove(); return; }
+      if (ev.target.closest('#tm-welcome-install')) {
+        ov.remove();
+        if (window.tmInstallApp) window.tmInstallApp();
+      }
+    });
+    document.body.appendChild(ov);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', show);
+  } else { show(); }
+})();
+</script>
+<script>
 /* PDF 자료 다운로드 — 상단바 PDF 버튼(window.tmPdf)에서 호출 */
 (function () {
   var FILES = [
