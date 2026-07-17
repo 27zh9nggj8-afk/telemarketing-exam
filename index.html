@@ -857,6 +857,28 @@ react/cjs/react-jsx-runtime.production.js:
 <script>
 /* PDF 자료 다운로드 — 상단바 PDF 버튼(window.tmPdf)에서 호출 */
 (function () {
+  // 모바일(특히 홈 화면 앱)에서는 링크로 열면 나가기·저장 버튼이 없어서,
+  // 공유 시트(파일에 저장 포함)를 먼저 시도하고 안 되면 새 창(브라우저)으로 연다
+  var ua = navigator.userAgent;
+  var isMobile = /iPhone|iPad|iPod|Android/i.test(ua) || (/Mac/.test(ua) && navigator.maxTouchPoints > 1);
+  window.tmSavePdf = function (a, ev) {
+    if (!isMobile) return true; // 컴퓨터는 기본 다운로드 그대로
+    var href = a.getAttribute('href');
+    var name = a.getAttribute('download') || 'download.pdf';
+    if (navigator.share && navigator.canShare) {
+      fetch(href).then(function (r) { return r.blob(); }).then(function (b) {
+        var f = new File([b], name, { type: 'application/pdf' });
+        if (navigator.canShare({ files: [f] })) return navigator.share({ files: [f] });
+        window.open(href, '_blank');
+      }).catch(function (e) {
+        if (e && e.name === 'AbortError') return; // 사용자가 공유 시트를 닫음
+        window.open(href, '_blank');
+      });
+    } else {
+      window.open(href, '_blank');
+    }
+    return false;
+  };
   var FILES = [
     { href: 'pdf/final-review.pdf', name: '합격노트 시험 직전 마지막 빈출 정리.pdf', title: '시험 직전 마지막 정리 PDF <span style="background:#FFF1F0;color:#D6403A;font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:8px;vertical-align:1px;">NEW</span>', desc: '2회 이상 출제된 빈출 45문제 + 정답 · 6쪽' },
     { href: 'pdf/study-note.pdf', name: '합격노트 텔레마케팅 실기 공부노트.pdf', title: '개념서 PDF', desc: '공부노트 · 13단원 + 부록 · 24쪽' },
@@ -864,7 +886,7 @@ react/cjs/react-jsx-runtime.production.js:
   ];
   window.tmPdf = function () {
     var rows = FILES.map(function (fdef) {
-      return '<a href="' + fdef.href + '" download="' + fdef.name + '" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 16px;margin-top:10px;background:#F4F6FB;border-radius:14px;text-decoration:none;color:#14171c;">'
+      return '<a href="' + fdef.href + '" download="' + fdef.name + '" target="_blank" rel="noopener" onclick="return window.tmSavePdf(this, event)" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 16px;margin-top:10px;background:#F4F6FB;border-radius:14px;text-decoration:none;color:#14171c;">'
         + '<span><b style="font-size:15px;">' + fdef.title + '</b><br><span style="font-size:12.5px;color:#5b6472;">' + fdef.desc + '</span></span>'
         + '<span style="flex-shrink:0;width:34px;height:34px;border-radius:10px;background:#2958C2;color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;">↓</span></a>';
     }).join('');
@@ -972,7 +994,7 @@ react/cjs/react-jsx-runtime.production.js:
       + '<div class="nt-pdf">'
       + '<div class="t"><span class="new">NEW</span>시험 직전 마지막 빈출 정리 PDF</div>'
       + '<div class="d">최근 10회 기출에서 <b>2회 이상 출제된 문제 45개</b>를 답과 함께 모았어요. 시험장 가는 길엔 이것만 보세요. 상단 PDF 버튼에서도 받을 수 있어요.</div>'
-      + '<a href="pdf/final-review.pdf" download="합격노트 시험 직전 마지막 빈출 정리.pdf">PDF 받기</a>'
+      + '<a href="pdf/final-review.pdf" download="합격노트 시험 직전 마지막 빈출 정리.pdf" target="_blank" rel="noopener" onclick="return window.tmSavePdf(this, event)">PDF 받기</a>'
       + '</div>'
       + '<div class="nt-close">닫기</div></div>';
 
