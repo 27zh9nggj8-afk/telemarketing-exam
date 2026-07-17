@@ -858,6 +858,7 @@ react/cjs/react-jsx-runtime.production.js:
 /* PDF 자료 다운로드 — 상단바 PDF 버튼(window.tmPdf)에서 호출 */
 (function () {
   var FILES = [
+    { href: 'pdf/final-review.pdf', name: '합격노트 시험 직전 마지막 빈출 정리.pdf', title: '시험 직전 마지막 정리 PDF <span style="background:#FFF1F0;color:#D6403A;font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:8px;vertical-align:1px;">NEW</span>', desc: '2회 이상 출제된 빈출 45주제 + 정답 · 6쪽' },
     { href: 'pdf/study-note.pdf', name: '합격노트 텔레마케팅 실기 공부노트.pdf', title: '개념서 PDF', desc: '공부노트 · 13단원 + 부록 · 24쪽' },
     { href: 'pdf/exam-practice.pdf', name: '합격노트 기출연습.pdf', title: '기출 연습 PDF', desc: '기출 10회 250문항 + 정답 · 91쪽' }
   ];
@@ -880,6 +881,122 @@ react/cjs/react-jsx-runtime.production.js:
     });
     document.body.appendChild(ov);
   };
+})();
+</script>
+<script>
+/* 실기시험 안내 공지 — 로그인/게스트 부팅 후 자동 표시, 시험일(7/19)이 지나면 자동 종료 */
+(function () {
+  if (new Date() > new Date(2026, 6, 19, 23, 59, 59)) return;
+  var q = new URLSearchParams(location.search);
+  if (q.has('welcome') || q.has('paymentId')) return; // 환영 화면과 겹치지 않게 이번 방문은 건너뜀
+
+  var SECTIONS = [
+    { icon: '🎒', title: '시험 당일 준비물', open: true, rows: [
+      ['신분증', '주민등록증·운전면허증 등 — 모바일 신분증(정부24·PASS 앱)도 인정돼요'],
+      ['수험표', '큐넷에서 출력하거나 모바일 수험표로 준비하세요'],
+      ['검은색 볼펜', '답안은 흑색 필기구만 인정 — 예비로 1~2자루 더 챙기세요'],
+      ['수정테이프', '사용 가능해요 (두 줄 긋고 다시 써도 돼요)'],
+      ['손목시계', '통신·결제 기능 없는 일반 시계만 — 스마트워치는 안 돼요']
+    ] },
+    { icon: '⏰', title: '입실 시간 · 시험 진행', rows: [
+      '수험표에 적힌 <b>입실시간까지 꼭 도착</b>하세요. 입실시간이 지나면 시험을 볼 수 없어요',
+      '시험장 위치와 교통편은 <b>전날 미리</b> 확인해두세요',
+      '실기(필답형)는 <b>주관식 20~25문항</b>, <b>2시간 30분</b> 동안 진행돼요',
+      '100점 만점에 <b>60점 이상</b>이면 합격이에요'
+    ] },
+    { icon: '✍️', title: '답안 작성 규칙', rows: [
+      '답안 작성(인적사항 포함)은 <b>검은색 필기구만</b> 사용해야 해요',
+      '답을 고칠 땐 <b>두 줄(=)을 긋고 다시 쓰거나 수정테이프</b>를 쓰면 돼요',
+      '문제지를 받으면 <b>응시 종목이 맞는지</b> 먼저 확인하세요',
+      '연습란은 채점되지 않아요'
+    ] },
+    { icon: '📝', title: '점수 올리는 답안 요령', rows: [
+      '순서 문제는 <b>화살표(→)</b>로 이어 쓰세요',
+      '"○가지 쓰시오"는 <b>요구한 개수만</b> — 더 쓰면 앞에서부터 채점돼 틀린 답이 섞이면 손해예요',
+      '영어 약어(RFM·SMART 등)는 <b>풀네임과 한글 뜻</b>을 함께 쓰면 안전해요',
+      '모르는 문제도 비워두지 말고 아는 만큼 쓰세요 — <b>부분점수</b>가 있어요'
+    ] },
+    { icon: '🚫', title: '유의사항', rows: [
+      '휴대폰 등 전자기기는 <b>전원을 끄고 감독위원에게 제출</b>하세요 — 소지만 해도 부정행위로 처리될 수 있어요',
+      '시험 중 이어폰·스마트워치 착용 금지',
+      '신분증이 없으면 응시가 제한될 수 있어요'
+    ] }
+  ];
+
+  var css = '#tm-notice{position:fixed;inset:0;z-index:99989;background:rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;padding:20px;}'
+    + '#tm-notice .nt-card{background:#fff;color:#14171c;border-radius:20px;padding:24px 20px 12px;max-width:400px;width:100%;max-height:86vh;overflow-y:auto;font-family:inherit;line-height:1.6;box-shadow:0 20px 60px rgba(0,0,0,.25);}'
+    + '#tm-notice .nt-badge{display:inline-block;background:#EDF1FA;color:#2958C2;font-weight:800;font-size:11.5px;padding:3px 10px;border-radius:9px;letter-spacing:.5px;}'
+    + '#tm-notice .nt-title{font-size:18px;font-weight:800;margin-top:10px;letter-spacing:-.3px;}'
+    + '#tm-notice .nt-sub{font-size:13px;color:#5b6472;margin-top:3px;}'
+    + '#tm-notice .nt-acc{margin-top:14px;border:1px solid #eef0f3;border-radius:14px;overflow:hidden;}'
+    + '#tm-notice .nt-item+.nt-item{border-top:1px solid #eef0f3;}'
+    + '#tm-notice .nt-q{display:flex;align-items:center;gap:9px;width:100%;padding:13px 14px;background:none;border:none;font:inherit;font-size:14.5px;font-weight:700;color:#14171c;cursor:pointer;text-align:left;}'
+    + '#tm-notice .nt-q .ic{font-size:16px;}'
+    + '#tm-notice .nt-q .ch{margin-left:auto;color:#8b95a1;font-size:11px;transition:transform .18s;}'
+    + '#tm-notice .nt-item.open .nt-q .ch{transform:rotate(180deg);}'
+    + '#tm-notice .nt-a{display:none;padding:1px 16px 13px 39px;font-size:13px;color:#3d4650;line-height:1.62;}'
+    + '#tm-notice .nt-item.open .nt-a{display:block;}'
+    + '#tm-notice .nt-a .r{margin-top:7px;padding-left:11px;position:relative;}'
+    + '#tm-notice .nt-a .r:before{content:"";position:absolute;left:0;top:8px;width:4px;height:4px;border-radius:2px;background:#2958C2;}'
+    + '#tm-notice .nt-pdf{margin-top:12px;background:#F5F8FF;border:1px solid #DCE6FA;border-radius:14px;padding:14px 15px;}'
+    + '#tm-notice .nt-pdf .t{font-weight:800;font-size:14px;}'
+    + '#tm-notice .nt-pdf .t .new{background:#FFF1F0;color:#D6403A;font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:8px;vertical-align:1px;margin-right:6px;}'
+    + '#tm-notice .nt-pdf .d{font-size:12.5px;color:#5b6472;margin-top:4px;line-height:1.6;}'
+    + '#tm-notice .nt-pdf a{display:block;margin-top:10px;text-align:center;background:#2958C2;color:#fff;border-radius:11px;padding:11px;font-weight:700;font-size:14px;text-decoration:none;}'
+    + '#tm-notice .nt-close{margin-top:6px;text-align:center;color:#5b6472;padding:11px;font-size:14px;cursor:pointer;}';
+
+  function rowHtml(r) {
+    if (typeof r === 'string') return '<div class="r">' + r + '</div>';
+    return '<div class="r"><b>' + r[0] + '</b> — ' + r[1] + '</div>';
+  }
+
+  function show() {
+    if (document.getElementById('tm-notice')) return;
+    var st = document.createElement('style');
+    st.textContent = css;
+    document.head.appendChild(st);
+
+    var items = SECTIONS.map(function (s) {
+      return '<div class="nt-item' + (s.open ? ' open' : '') + '">'
+        + '<button type="button" class="nt-q"><span class="ic">' + s.icon + '</span>' + s.title + '<span class="ch">▼</span></button>'
+        + '<div class="nt-a">' + s.rows.map(rowHtml).join('') + '</div></div>';
+    }).join('');
+
+    var ov = document.createElement('div');
+    ov.id = 'tm-notice';
+    ov.innerHTML = '<div class="nt-card">'
+      + '<span class="nt-badge">공지</span>'
+      + '<div class="nt-title">7월 19일(일) 실기시험 안내</div>'
+      + '<div class="nt-sub">항목을 누르면 내용이 열려요. 시험 전에 꼭 확인하세요.</div>'
+      + '<div class="nt-acc">' + items + '</div>'
+      + '<div class="nt-pdf">'
+      + '<div class="t"><span class="new">NEW</span>시험 직전 마지막 빈출 정리 PDF</div>'
+      + '<div class="d">최근 10회 기출에서 <b>2회 이상 출제된 45개 주제</b>만 답과 함께 모았어요. 시험장 가는 길엔 이것만 보세요. 상단 PDF 버튼에서도 받을 수 있어요.</div>'
+      + '<a href="pdf/final-review.pdf" download="합격노트 시험 직전 마지막 빈출 정리.pdf">PDF 받기</a>'
+      + '</div>'
+      + '<div class="nt-close">닫기</div></div>';
+
+    ov.addEventListener('click', function (ev) {
+      var qbtn = ev.target.closest('.nt-q');
+      if (qbtn) { qbtn.parentElement.classList.toggle('open'); return; }
+      if (ev.target === ov || ev.target.closest('.nt-close')) ov.remove();
+    });
+    document.body.appendChild(ov);
+  }
+
+  // 로그인/게스트 부팅이 끝나 앱이 #root에 렌더링된 뒤에만 표시
+  function armWhenBooted() {
+    var root = document.getElementById('root');
+    if (!root) return;
+    if (root.childElementCount > 0) { setTimeout(show, 500); return; }
+    var mo = new MutationObserver(function () {
+      if (root.childElementCount > 0) { mo.disconnect(); setTimeout(show, 500); }
+    });
+    mo.observe(root, { childList: true });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', armWhenBooted);
+  } else { armWhenBooted(); }
 })();
 </script>
 </body>
